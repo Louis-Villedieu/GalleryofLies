@@ -1,0 +1,15 @@
+*.o
+*.out
+*.exe
+program
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+*.log
