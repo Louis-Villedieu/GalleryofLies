@@ -1,6 +1,8 @@
 #include "../include/game.hpp"
+#include <cmath>
+#include <sstream>
 
-Game::Game() : window(nullptr), renderer(nullptr), player(nullptr), isRunning(true) {}
+Game::Game() : window(nullptr), renderer(nullptr), backgroundTexture(nullptr), player(nullptr), isRunning(true) {}
 
 Game::~Game() {
     cleanup();
@@ -24,7 +26,13 @@ bool Game::init() {
         SDL_Log("SDL could not create renderer! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
-    
+
+    backgroundTexture = IMG_LoadTexture(renderer, "assets/background.png");
+    if (!backgroundTexture) {
+        SDL_Log("Failed to load background texture! SDL_Error: %s\n", IMG_GetError());
+        return false;
+    }
+
     player = new Player("Louis", "V", "Inspect the crime scene", 400, 300, NULL, renderer);
     NPC* npc = new NPC("John", "Plas", 
         "you are the killer you can lie to the player to make him think you are innocent. "
@@ -49,6 +57,14 @@ void Game::handleEvents() {
         if (event.type == SDL_QUIT) {
             isRunning = false;
         }
+        else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN) {
+            if (isPlayerNearNPC(100.0f)) {
+                std::string nearestNPC = getNearestNPCName(100.0f);
+                if (!nearestNPC.empty()) {
+                    startInteraction(nearestNPC);
+                }
+            }
+        }
         player->handleEvent(event);
     }
 }
@@ -59,7 +75,9 @@ void Game::update() {
 
 void Game::render() {
     SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 135, 206, 235, 255);
+    
+    SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
+    
     player->renderSprite();
     for (const auto& [name, npc] : npcs) {
         npc->renderSprite();
@@ -74,7 +92,6 @@ void Game::gameLoop() {
         render();
         if (isPlayerNearNPC(100.0f)) {
             std::string npcName = getNearestNPCName(100.0f);
-            std::cout << "Player is near " << npcName << std::endl;
         }
     }
 }
@@ -108,6 +125,11 @@ void Game::cleanup() {
         window = nullptr;
     }
     
+    if (backgroundTexture) {
+        SDL_DestroyTexture(backgroundTexture);
+        backgroundTexture = nullptr;
+    }
+    
     SDL_Quit();
 }
 
@@ -120,7 +142,6 @@ bool Game::isPlayerNearNPC(float detectionRadius) {
     float dx = player->getPositionX() - npc->getPositionX();
         float dy = player->getPositionY() - npc->getPositionY();
         float distance = std::sqrt(dx * dx + dy * dy);
-        std::cout << "Distance to " << npcName << ": " << distance << std::endl;
         if (distance <= detectionRadius) {
             return true;
         }
@@ -138,4 +159,244 @@ std::string Game::getNearestNPCName(float detectionRadius) {
         }
     }
     return "";
+}
+
+void Game::startInteraction(std::string npcName) {
+    player->setIsMoving(false);
+    auto npcIt = npcs.find(npcName);
+
+    if (npcIt == npcs.end()) {
+        return;
+    }
+
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 70);
+    
+    SDL_Rect dialogBox = {
+        200,
+        600,
+        1200,
+        200
+    };
+    
+    SDL_RenderFillRect(renderer, &dialogBox);
+    SDL_RenderPresent(renderer);
+
+    SDL_Event event;
+    bool waitingForInput = true;
+    SDL_StartTextInput();
+    
+    std::string textInput;
+    
+    if (TTF_Init() < 0) {
+        SDL_Log("TTF_Init: %s\n", TTF_GetError());
+        return;
+    }
+
+    const int MAX_LINE_WIDTH = dialogBox.w;
+    const int LINE_HEIGHT = 30;
+    const int FONT_SIZE = 24;
+
+    TTF_Font* font = TTF_OpenFont("./assets/Minecraft.ttf", FONT_SIZE);
+    if (!font) {
+        SDL_Log("Failed to load font: %s\n", TTF_GetError());
+        return;
+    }
+
+    std::vector<SDL_Texture*> lineTextures;
+    std::vector<std::string> lines;
+    SDL_Color color = {255, 255, 255, 255};
+
+    while (waitingForInput) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_TEXTINPUT) {
+                textInput += event.text.text;
+            }
+            else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_BACKSPACE && !textInput.empty()) {
+                    textInput.pop_back();
+                }
+                else if (event.key.keysym.sym == SDLK_RETURN) {
+                    waitingForInput = false;
+                    SDL_StopTextInput();
+                }
+            }
+            if (event.type == SDL_QUIT) {
+                isRunning = false;
+                waitingForInput = false;
+                SDL_StopTextInput();
+            }
+
+            if (event.type == SDL_TEXTINPUT || 
+               (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_BACKSPACE)) {
+                
+                for (auto texture : lineTextures) {
+                    SDL_DestroyTexture(texture);
+                }
+                lineTextures.clear();
+                lines.clear();
+
+                std::string currentLine;
+                std::string word;
+                std::istringstream iss(textInput);
+
+                while (iss >> word) {
+                    int wordWidth;
+                    if (currentLine.empty()) {
+                        TTF_SizeText(font, word.c_str(), &wordWidth, nullptr);
+                    } else {
+                        TTF_SizeText(font, (currentLine + " " + word).c_str(), &wordWidth, nullptr);
+                    }
+                    
+                    if (wordWidth > MAX_LINE_WIDTH) {
+                        if (!currentLine.empty()) {
+                            lines.push_back(currentLine);
+                        }
+                        currentLine = word;
+                    } else {
+                        if (!currentLine.empty()) {
+                            currentLine += " ";
+                        }
+                        currentLine += word;
+                    }
+                }
+                if (!currentLine.empty()) {
+                    lines.push_back(currentLine);
+                }
+
+                for (const auto& line : lines) {
+                    SDL_Surface* tmp = TTF_RenderText_Solid(font, line.c_str(), color);
+                    if (tmp) {
+                        SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, tmp);
+                        lineTextures.push_back(tex);
+                        SDL_FreeSurface(tmp);
+                    }
+                }
+            }
+
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
+            
+            player->renderSprite();
+            for (const auto& [name, npc] : npcs) {
+                npc->renderSprite();
+            }
+
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 70);
+            SDL_RenderFillRect(renderer, &dialogBox);
+
+            for (size_t i = 0; i < lineTextures.size(); i++) {
+                SDL_Rect lineRect = {
+                    dialogBox.x + 20,
+                    dialogBox.y + 20 + (int)(i * LINE_HEIGHT), 
+                    0,
+                    LINE_HEIGHT
+                };
+                
+                SDL_QueryTexture(lineTextures[i], nullptr, nullptr, &lineRect.w, &lineRect.h);
+                
+                SDL_RenderCopy(renderer, lineTextures[i], nullptr, &lineRect);
+            }
+
+            SDL_RenderPresent(renderer);
+        }
+    }
+    NPC* npc = npcIt->second;
+    std::string answer = npc->thinkAndAnswer(textInput);
+    npc->setPastConversation("The player asked you: " + textInput + " and you answered: " + answer);
+    std::cout << answer << std::endl;
+
+    std::vector<SDL_Texture*> answerTextures;
+    std::vector<std::string> answerLines;
+    
+    std::string currentLine;
+    std::string word;
+    std::istringstream iss(answer);
+
+    while (iss >> word) {
+        int wordWidth;
+        if (currentLine.empty()) {
+            TTF_SizeText(font, word.c_str(), &wordWidth, nullptr);
+        } else {
+            TTF_SizeText(font, (currentLine + " " + word).c_str(), &wordWidth, nullptr);
+        }
+        
+        if (wordWidth > MAX_LINE_WIDTH) {
+            if (!currentLine.empty()) {
+                answerLines.push_back(currentLine);
+            }
+            currentLine = word;
+        } else {
+            if (!currentLine.empty()) {
+                currentLine += " ";
+            }
+            currentLine += word;
+        }
+    }
+    if (!currentLine.empty()) {
+        answerLines.push_back(currentLine);
+    }
+
+    SDL_Color npcTextColor = {255, 255, 0, 255};
+
+    for (const auto& line : answerLines) {
+        SDL_Surface* tmp = TTF_RenderText_Solid(font, line.c_str(), npcTextColor);
+        if (tmp) {
+            SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, tmp);
+            answerTextures.push_back(tex);
+            SDL_FreeSurface(tmp);
+        }
+    }
+
+    Uint32 startTime = SDL_GetTicks();
+    bool showingAnswer = true;
+    while (showingAnswer && SDL_GetTicks() - startTime < 5000) {
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
+        
+        player->renderSprite();
+        for (const auto& [name, npc] : npcs) {
+            npc->renderSprite();
+        }
+
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 70);
+        SDL_RenderFillRect(renderer, &dialogBox);
+
+        for (size_t i = 0; i < answerTextures.size(); i++) {
+            SDL_Rect lineRect = {
+                dialogBox.x + 20,
+                dialogBox.y + 20 + (int)(i * LINE_HEIGHT), 
+                0,
+                LINE_HEIGHT
+            };
+            
+            SDL_QueryTexture(answerTextures[i], nullptr, nullptr, &lineRect.w, &lineRect.h);
+            SDL_RenderCopy(renderer, answerTextures[i], nullptr, &lineRect);
+        }
+
+        SDL_RenderPresent(renderer);
+
+        SDL_Event e;
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                isRunning = false;
+                showingAnswer = false;
+            }
+            else if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_RETURN) {
+                showingAnswer = false;
+            }
+        }
+    }
+
+    for (auto texture : answerTextures) {
+        SDL_DestroyTexture(texture);
+    }
+
+    for (auto texture : lineTextures) {
+        SDL_DestroyTexture(texture);
+    }
+    TTF_CloseFont(font);
+    TTF_Quit();
 }

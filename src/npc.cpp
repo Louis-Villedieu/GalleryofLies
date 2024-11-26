@@ -23,14 +23,14 @@ std::string NPC::thinkAndAnswer(std::string question) {
     if(curl) {
         struct curl_slist* headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
-        headers = curl_slist_append(headers, "Authorization: Bearer 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");
+        headers = curl_slist_append(headers, "Authorization: Bearer ");
         
         nlohmann::json requestData = {
             {"model", "gpt-3.5-turbo"},
             {"messages", {{
                 {"role", "user"},
-                {"content", "Your are a npc in a game named " + firstName + " " + lastName + ". " + "Your role is " + aiOrder 
-                + ". " + "The player asked you: " + question + " and you must answer in a short sentence. Here is your past conversation: " }  //TODO: add the past conversation
+                {"content", "Your are a character in a game named " + firstName + " " + lastName + ". " + " here is your past conversation with the player: " + pastConversation + ". " + "Your role is " + aiOrder 
+                + ". " + "The player asked you: " + question + " and you must answer in a short sentence. " } 
             }}}
         };
         std::string jsonString = requestData.dump();
@@ -57,10 +57,13 @@ std::string NPC::thinkAndAnswer(std::string question) {
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
     }
-    
     return response;
 }
 
 void NPC::setTexture(SDL_Texture* texture) {
     this->texture = texture;
+}
+
+void NPC::setPastConversation(std::string newResponse) {
+    this->pastConversation = pastConversation + " " + newResponse;
 }

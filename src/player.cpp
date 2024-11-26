@@ -24,9 +24,12 @@ void Player::renderSprite() {
 void Player::move() {
     if (!isMoving)
         return;
-    positionX += dx;
-    positionY += dy;
     int currentTime = SDL_GetTicks();
+    if (currentTime - lastMoveTime > 5) {
+    positionX += dx;
+        positionY += dy;
+        lastMoveTime = currentTime;
+    }
     if (currentTime - lastUpdateTime > animationSpeed) {
         currentFrame++;
         lastUpdateTime = currentTime;
@@ -73,4 +76,8 @@ void Player::handleEvent(SDL_Event& event) {
 
 void Player::setTexture(SDL_Texture* texture) {
     this->texture = texture;
+}
+
+void Player::setIsMoving(bool isMoving) {
+    this->isMoving = isMoving;
 }

@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 #include "player.hpp"
 #include "npc.hpp"
 #include <map>
@@ -12,6 +13,7 @@ class Game {
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
+    SDL_Texture* backgroundTexture;
     Player* player;
     std::map<std::string, NPC*> npcs;
     bool isRunning;
@@ -29,6 +31,7 @@ public:
     bool running() const;
     bool isPlayerNearNPC(float detectionRadius = 100.0f);
     std::string getNearestNPCName(float detectionRadius = 100.0f);
+    void startInteraction(std::string npcName);
 
 private:
     Game(const Game&) = delete;
