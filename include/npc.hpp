@@ -8,7 +8,7 @@ class NPC : public Character
     private:
         std::string pastConversation;
     public:
-        NPC(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer);
+        NPC(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer, SDL_Color color);
         ~NPC();
         void renderSprite() override;
         std::string thinkAndAnswer(std::string question);

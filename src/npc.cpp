@@ -2,7 +2,7 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
-NPC::NPC(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer) : Character(firstName, lastName, aiOrder, positionX, positionY, texture, renderer) {}
+NPC::NPC(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer, SDL_Color color) : Character(firstName, lastName, aiOrder, positionX, positionY, texture, renderer, color) {}
 
 NPC::~NPC() {}
 

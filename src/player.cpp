@@ -1,6 +1,6 @@
 #include "../include/player.hpp"
 
-Player::Player(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer) : Character(firstName, lastName, aiOrder, positionX, positionY, texture, renderer) {
+Player::Player(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer, SDL_Color color) : Character(firstName, lastName, aiOrder, positionX, positionY, texture, renderer, color) {
     speed = 1;
     isMoving = false;
     dx = 0;
@@ -9,10 +9,15 @@ Player::Player(std::string firstName, std::string lastName, std::string aiOrder,
     currentRow = 0;
     frameWidth = 576 / 3;
     frameHeight = 768 / 4;
+    walkSound = nullptr;
+    loadWalkSound();
 }
 
 Player::~Player() {
-    std::cout << "Player destroyed" << std::endl;
+    if (walkSound) {
+        Mix_FreeChunk(walkSound);
+        walkSound = nullptr;
+    }
 }
 
 void Player::renderSprite() {
@@ -22,13 +27,17 @@ void Player::renderSprite() {
 }
 
 void Player::move() {
-    if (!isMoving)
-        return;
+    if (!isMoving) return;
+    
     int currentTime = SDL_GetTicks();
     if (currentTime - lastMoveTime > 5) {
-    positionX += dx;
+        positionX += dx;
         positionY += dy;
         lastMoveTime = currentTime;
+        
+        if (walkSound && (dx != 0 || dy != 0) && Mix_Playing(-1) == 0) {
+            Mix_PlayChannel(-1, walkSound, 0);
+        }
     }
     if (currentTime - lastUpdateTime > animationSpeed) {
         currentFrame++;
@@ -80,4 +89,15 @@ void Player::setTexture(SDL_Texture* texture) {
 
 void Player::setIsMoving(bool isMoving) {
     this->isMoving = isMoving;
+}
+
+void Player::loadWalkSound() {
+    const char* soundPath = "./assets/walk.wav";
+    walkSound = Mix_LoadWAV(soundPath);
+    if (!walkSound) {
+        std::cout << "Failed to load walk sound! SDL_mixer Error: " << Mix_GetError() << std::endl;
+    } else {
+        Mix_VolumeChunk(walkSound, 20);
+        std::cout << "Walk sound loaded successfully!" << std::endl;
+    }
 }

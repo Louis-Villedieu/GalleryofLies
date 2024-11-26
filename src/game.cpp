@@ -2,10 +2,12 @@
 #include <cmath>
 #include <sstream>
 
-Game::Game() : window(nullptr), renderer(nullptr), backgroundTexture(nullptr), player(nullptr), isRunning(true) {}
+Game::Game() : window(nullptr), renderer(nullptr), backgroundTexture(nullptr), player(nullptr), isRunning(true), backgroundMusic(nullptr) {}
 
 Game::~Game() {
     cleanup();
+    Mix_CloseAudio();
+    Mix_Quit();
 }
 
 bool Game::init() {
@@ -33,21 +35,38 @@ bool Game::init() {
         return false;
     }
 
-    player = new Player("Louis", "V", "Inspect the crime scene", 400, 300, NULL, renderer);
-    NPC* npc = new NPC("John", "Plas", 
-        "you are the killer you can lie to the player to make him think you are innocent. "
-        "you killed the victim with a knife. You did it at 2AM it is now 4AM and you didn't leaved the museum (scene of crime)", 
-        800, 300, NULL, renderer);
-    npcs["John"] = npc;
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        std::cout << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << std::endl;
+        return false;
+    }
+    std::cout << "SDL_mixer initialized successfully!" << std::endl;
+
+    backgroundMusic = Mix_LoadMUS("assets/musicloop.mp3");
+    if (!backgroundMusic) {
+        std::cout << "Failed to load background music! SDL_mixer Error: " << Mix_GetError() << std::endl;
+        return false;
+    }
+    
+    Mix_PlayMusic(backgroundMusic, -1);
+    Mix_VolumeMusic(10);
+
+    player = new Player("Louis", "V", "Inspect the crime scene", 400, 300, NULL, renderer, {255, 255, 255, 255});
+    NPC* John = new NPC("John", "Plas", "assets/NPC/John/john.gol", 800, 300, NULL, renderer, {100, 100, 255, 255});
+    NPC* Laura = new NPC("Laura", "Vardi", "assets/NPC/Laura/laura.gol",100, 500, NULL, renderer, {240, 100, 90, 255});
+    npcs["John"] = John;
+    npcs["Laura"] = Laura;
      
     SDL_Texture* playerTexture = IMG_LoadTexture(renderer, "assets/player.png");
-    SDL_Texture* npcTexture = IMG_LoadTexture(renderer, "assets/npc1.png");
+    SDL_Texture* npcTexture = IMG_LoadTexture(renderer, "assets/NPC/John/npc1.png");
+    SDL_Texture* LauraTexture = IMG_LoadTexture(renderer, "assets/NPC/Laura/laura.png");
     if (!playerTexture) {
         SDL_Log("SDL could not load player texture! SDL_Error: %s\n", IMG_GetError());
         return false;
     }
     player->setTexture(playerTexture);
-    npc->setTexture(npcTexture);
+    John->setTexture(npcTexture);
+    Laura->setTexture(LauraTexture);
+
     return true;
 }
 
@@ -130,6 +149,11 @@ void Game::cleanup() {
         backgroundTexture = nullptr;
     }
     
+    if (backgroundMusic) {
+        Mix_FreeMusic(backgroundMusic);
+        backgroundMusic = nullptr;
+    }
+    
     SDL_Quit();
 }
 
@@ -170,7 +194,7 @@ void Game::startInteraction(std::string npcName) {
     }
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 70);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
     
     SDL_Rect dialogBox = {
         200,
@@ -205,7 +229,7 @@ void Game::startInteraction(std::string npcName) {
 
     std::vector<SDL_Texture*> lineTextures;
     std::vector<std::string> lines;
-    SDL_Color color = {255, 255, 255, 255};
+    SDL_Color color = player->getColor();
 
     while (waitingForInput) {
         while (SDL_PollEvent(&event)) {
@@ -283,7 +307,7 @@ void Game::startInteraction(std::string npcName) {
             }
 
             SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 70);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
             SDL_RenderFillRect(renderer, &dialogBox);
 
             for (size_t i = 0; i < lineTextures.size(); i++) {
@@ -338,7 +362,7 @@ void Game::startInteraction(std::string npcName) {
         answerLines.push_back(currentLine);
     }
 
-    SDL_Color npcTextColor = {255, 255, 0, 255};
+    SDL_Color npcTextColor = npc->getColor();
 
     for (const auto& line : answerLines) {
         SDL_Surface* tmp = TTF_RenderText_Solid(font, line.c_str(), npcTextColor);
@@ -351,7 +375,7 @@ void Game::startInteraction(std::string npcName) {
 
     Uint32 startTime = SDL_GetTicks();
     bool showingAnswer = true;
-    while (showingAnswer && SDL_GetTicks() - startTime < 5000) {
+    while (showingAnswer && SDL_GetTicks() - startTime < 20000) {
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, backgroundTexture, NULL, NULL);
         
@@ -361,7 +385,7 @@ void Game::startInteraction(std::string npcName) {
         }
 
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 70);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
         SDL_RenderFillRect(renderer, &dialogBox);
 
         for (size_t i = 0; i < answerTextures.size(); i++) {

@@ -17,6 +17,7 @@ private:
     Player* player;
     std::map<std::string, NPC*> npcs;
     bool isRunning;
+    Mix_Music* backgroundMusic;
 
 public:
     Game();
