@@ -15,7 +15,7 @@ class Character
         int positionY;
         SDL_Texture* texture;
         SDL_Renderer* renderer;
-        int currentFrame = 0;
+        int currentFrame = 1;
         int currentRow = 0;
         int frameWidth = 576 / 3;  
         int frameHeight = 768 / 4;
@@ -24,6 +24,11 @@ class Character
         virtual ~Character() = default;
         virtual void renderSprite() = 0;
         SDL_Texture* getTexture() const { return texture; }
+        std::string getFirstName() const { return firstName; }
+        std::string getLastName() const { return lastName; }
+        std::string getAiOrder() const { return aiOrder; }
+        int getPositionX() const { return positionX; }
+        int getPositionY() const { return positionY; }
 };
 
 #endif

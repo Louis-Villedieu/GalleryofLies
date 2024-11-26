@@ -33,48 +33,40 @@ void Player::move() {
     }
     if (currentFrame >= 3)
         currentFrame = 0;
-    std::cout << "Player moved to (" << positionX << ", " << positionY << ")" << std::endl;
 }
 
 void Player::handleEvent(SDL_Event& event) {
+    static const struct {
+        SDL_Keycode key;
+        int dx;
+        int dy;
+        int row;
+    } moveMap[] = {
+        {SDLK_UP,    0, -1, 3},
+        {SDLK_DOWN,  0,  1, 0},
+        {SDLK_LEFT, -1,  0, 1},
+        {SDLK_RIGHT, 1,  0, 2}
+    };
+
     if (event.type == SDL_KEYDOWN) {
-        switch (event.key.keysym.sym) {
-            case SDLK_UP:
-                dx = 0;
-                dy = -speed;
+        for (const auto& move : moveMap) {
+            if (event.key.keysym.sym == move.key) {
+                dx = move.dx * speed;
+                dy = move.dy * speed;
+                currentRow = move.row;
                 isMoving = true;
-                currentRow = 3;
-                break;
-            case SDLK_DOWN:
-                dx = 0;
-                dy = speed;
-                isMoving = true;
-                currentRow = 0;
-                break;
-            case SDLK_LEFT:
-                dx = -speed;
-                dy = 0;
-                isMoving = true;
-                currentRow = 1;
-                break;
-            case SDLK_RIGHT:
-                dx = speed;
-                dy = 0;
-                isMoving = true;
-                currentRow = 2;
-                break;
+                return;
+            }
         }
     }
     else if (event.type == SDL_KEYUP) {
-        switch (event.key.keysym.sym) {
-            case SDLK_UP:
-            case SDLK_DOWN:
-            case SDLK_LEFT:
-            case SDLK_RIGHT:
+        for (const auto& move : moveMap) {
+            if (event.key.keysym.sym == move.key) {
                 dx = 0;
                 dy = 0;
                 isMoving = false;
-                break;
+                return;
+            }
         }
     }
 }
