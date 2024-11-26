@@ -1,46 +1,23 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include "../include/player.hpp"
+#include "../include/game.hpp"
 
-SDL_Window* window;
-SDL_Renderer* renderer;
-
-void init() {
-    SDL_Init(SDL_INIT_VIDEO);
-    window = SDL_CreateWindow("Gallery of Lies", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 900, SDL_WINDOW_SHOWN);
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-}
-
-void gameLoop() {
-    Player player("Louis", "V", "Inspect the crime scene", 400, 300, NULL, renderer);
-    SDL_Texture* playerTexture = IMG_LoadTexture(renderer, "assets/player.png");
-    player.setTexture(playerTexture);
-    while (true) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                return;
-            }
-            player.handleEvent(event);
-        }
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 135, 206, 235, 255);
-        player.renderSprite();
-        player.move();
-        
-        SDL_RenderPresent(renderer);
+int main(int argc, char* argv[]) {
+    if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
+        SDL_Log("Erreur d'initialisation de SDL_image : %s", IMG_GetError());
+        return 1;
     }
-}
 
-void free() {
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-}
+    Game game;
+    if (!game.init()) {
+        SDL_Log("Erreur d'initialisation du jeu");
+        IMG_Quit();
+        return 1;
+    }
 
-int main(int argc, char** argv) {
-    init();
-    gameLoop();
-    free();
+    game.gameLoop();
+
+    IMG_Quit();
+    
     return 0;
 }

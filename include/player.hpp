@@ -12,6 +12,8 @@ class Player : public Character
         int dx;
         int dy;
         bool isMoving;
+        int lastUpdateTime;
+        const int animationSpeed = 200;
     public:
         Player(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer);
         ~Player();

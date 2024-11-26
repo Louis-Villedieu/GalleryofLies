@@ -16,19 +16,23 @@ Player::~Player() {
 }
 
 void Player::renderSprite() {
-    std::cout << "Rendering player sprite" << std::endl;
-    std::cout << "Current frame: " << currentFrame << std::endl;
-    std::cout << "Current row: " << currentRow << std::endl;
-    std::cout << "Frame width: " << frameWidth << std::endl;
-    std::cout << "Frame height: " << frameHeight << std::endl; 
     SDL_Rect srcRect = {currentFrame * frameWidth, currentRow * frameHeight, frameWidth, frameHeight};
-    SDL_Rect destRect = {positionX, positionY, frameWidth, frameHeight};
+    SDL_Rect destRect = {positionX, positionY, frameWidth / 3, frameHeight / 3};
     SDL_RenderCopy(renderer, texture, &srcRect, &destRect);
 }
 
 void Player::move() {
+    if (!isMoving)
+        return;
     positionX += dx;
     positionY += dy;
+    int currentTime = SDL_GetTicks();
+    if (currentTime - lastUpdateTime > animationSpeed) {
+        currentFrame++;
+        lastUpdateTime = currentTime;
+    }
+    if (currentFrame >= 3)
+        currentFrame = 0;
     std::cout << "Player moved to (" << positionX << ", " << positionY << ")" << std::endl;
 }
 
@@ -39,21 +43,25 @@ void Player::handleEvent(SDL_Event& event) {
                 dx = 0;
                 dy = -speed;
                 isMoving = true;
+                currentRow = 3;
                 break;
             case SDLK_DOWN:
                 dx = 0;
                 dy = speed;
                 isMoving = true;
+                currentRow = 0;
                 break;
             case SDLK_LEFT:
                 dx = -speed;
                 dy = 0;
                 isMoving = true;
+                currentRow = 1;
                 break;
             case SDLK_RIGHT:
                 dx = speed;
                 dy = 0;
                 isMoving = true;
+                currentRow = 2;
                 break;
         }
     }

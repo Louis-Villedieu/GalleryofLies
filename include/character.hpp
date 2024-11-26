@@ -23,6 +23,7 @@ class Character
         Character(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer);
         virtual ~Character() = default;
         virtual void renderSprite() = 0;
+        SDL_Texture* getTexture() const { return texture; }
 };
 
 #endif
