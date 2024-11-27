@@ -14,6 +14,7 @@ private:
     SDL_Window* window;
     SDL_Renderer* renderer;
     SDL_Texture* backgroundTexture;
+    SDL_Texture* questionIndicator;
     Player* player;
     std::map<std::string, NPC*> npcs;
     bool isRunning;

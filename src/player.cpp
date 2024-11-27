@@ -29,22 +29,20 @@ void Player::renderSprite() {
 void Player::move() {
     if (!isMoving) return;
     
+    static const float MOVEMENT_SPEED = 3.50f;
+    
+    positionX += dx * MOVEMENT_SPEED;
+    positionY += dy * MOVEMENT_SPEED;
+    
     int currentTime = SDL_GetTicks();
-    if (currentTime - lastMoveTime > 5) {
-        positionX += dx;
-        positionY += dy;
-        lastMoveTime = currentTime;
-        
-        if (walkSound && (dx != 0 || dy != 0) && Mix_Playing(-1) == 0) {
-            Mix_PlayChannel(-1, walkSound, 0);
-        }
-    }
     if (currentTime - lastUpdateTime > animationSpeed) {
-        currentFrame++;
+        currentFrame = (currentFrame + 1) % 3;
         lastUpdateTime = currentTime;
     }
-    if (currentFrame >= 3)
-        currentFrame = 0;
+    
+    if (walkSound && (dx != 0 || dy != 0) && Mix_Playing(-1) == 0) {
+        Mix_PlayChannel(-1, walkSound, 0);
+    }
 }
 
 void Player::handleEvent(SDL_Event& event) {

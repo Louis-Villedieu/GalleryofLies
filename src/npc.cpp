@@ -1,8 +1,16 @@
 #include "../include/npc.hpp"
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
-NPC::NPC(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer, SDL_Color color) : Character(firstName, lastName, aiOrder, positionX, positionY, texture, renderer, color) {}
+NPC::NPC(std::string firstName, std::string lastName, std::string aiOrder, int positionX, int positionY, SDL_Texture* texture, SDL_Renderer* renderer, SDL_Color color) : Character(firstName, lastName, aiOrder, positionX, positionY, texture, renderer, color) {
+    std::ifstream file(aiOrder);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    this->aiOrder = buffer.str();
+}
 
 NPC::~NPC() {}
 
@@ -26,11 +34,11 @@ std::string NPC::thinkAndAnswer(std::string question) {
         headers = curl_slist_append(headers, "Authorization: Bearer ");
         
         nlohmann::json requestData = {
-            {"model", "gpt-3.5-turbo"},
+            {"model", "gpt-4o"},
             {"messages", {{
                 {"role", "user"},
                 {"content", "Your are a character in a game named " + firstName + " " + lastName + ". " + " here is your past conversation with the player: " + pastConversation + ". " + "Your role is " + aiOrder 
-                + ". " + "The player asked you: " + question + " and you must answer in a short sentence. " } 
+                + ". " + "The player asked you: " + question + " and you must answer in a short sentence without accents. " } 
             }}}
         };
         std::string jsonString = requestData.dump();

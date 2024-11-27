@@ -2,7 +2,9 @@
 #include <cmath>
 #include <sstream>
 
-Game::Game() : window(nullptr), renderer(nullptr), backgroundTexture(nullptr), player(nullptr), isRunning(true), backgroundMusic(nullptr) {}
+Game::Game() : window(nullptr), renderer(nullptr), backgroundTexture(nullptr), 
+               questionIndicator(nullptr), player(nullptr), isRunning(true), 
+               backgroundMusic(nullptr) {}
 
 Game::~Game() {
     cleanup();
@@ -51,21 +53,34 @@ bool Game::init() {
     Mix_VolumeMusic(10);
 
     player = new Player("Louis", "V", "Inspect the crime scene", 400, 300, NULL, renderer, {255, 255, 255, 255});
+    SDL_Texture* playerTexture = IMG_LoadTexture(renderer, "assets/player.png");
+    player->setTexture(playerTexture);
+
     NPC* John = new NPC("John", "Plas", "assets/NPC/John/john.gol", 800, 300, NULL, renderer, {100, 100, 255, 255});
     NPC* Laura = new NPC("Laura", "Vardi", "assets/NPC/Laura/laura.gol",100, 500, NULL, renderer, {240, 100, 90, 255});
+    NPC* Sophie = new NPC("Sophie", "Martin", "assets/NPC/Sophie/Sophie.gol", 1200, 300, NULL, renderer, {255, 0, 100, 255});
+    NPC* Marton = new NPC("Marton", "Papp", "assets/NPC/Marton/marton.pol", 800, 550, NULL, renderer, {255, 0, 100, 255});
+
     npcs["John"] = John;
     npcs["Laura"] = Laura;
+    npcs["Sophie"] = Sophie;
+    npcs["Marton"] = Marton;
      
-    SDL_Texture* playerTexture = IMG_LoadTexture(renderer, "assets/player.png");
     SDL_Texture* npcTexture = IMG_LoadTexture(renderer, "assets/NPC/John/npc1.png");
     SDL_Texture* LauraTexture = IMG_LoadTexture(renderer, "assets/NPC/Laura/laura.png");
-    if (!playerTexture) {
-        SDL_Log("SDL could not load player texture! SDL_Error: %s\n", IMG_GetError());
-        return false;
-    }
-    player->setTexture(playerTexture);
+    SDL_Texture* SophieTexture = IMG_LoadTexture(renderer, "assets/NPC/Sophie/Sophie.png");
+    SDL_Texture* MartonTexture = IMG_LoadTexture(renderer, "assets/NPC/Marton/Marton.png");
+
     John->setTexture(npcTexture);
     Laura->setTexture(LauraTexture);
+    Sophie->setTexture(SophieTexture);
+    Marton->setTexture(MartonTexture);
+    
+    questionIndicator = IMG_LoadTexture(renderer, "assets/question.png");
+    if (!questionIndicator) {
+        SDL_Log("Failed to load question indicator texture! SDL_Error: %s\n", IMG_GetError());
+        return false;
+    }
 
     return true;
 }
@@ -101,14 +116,44 @@ void Game::render() {
     for (const auto& [name, npc] : npcs) {
         npc->renderSprite();
     }
+
+    if (isPlayerNearNPC()) {
+        std::string nearestNPCName = getNearestNPCName();
+        if (!nearestNPCName.empty()) {
+            NPC* nearestNPC = npcs[nearestNPCName];
+            SDL_Rect questionRect = {
+                static_cast<int>(nearestNPC->getPositionX() + 10),
+                static_cast<int>(nearestNPC->getPositionY() - 30),
+                40,
+                40
+            };
+            SDL_RenderCopy(renderer, questionIndicator, NULL, &questionRect);
+        }
+    }
+
     SDL_RenderPresent(renderer);
 }
 
 void Game::gameLoop() {
+    const int FPS = 60;
+    const int frameDelay = 1000 / FPS;
+    
+    Uint32 frameStart;
+    int frameTime;
+    
     while (isRunning) {
+        frameStart = SDL_GetTicks();
+        
         handleEvents();
         update();
         render();
+        
+        frameTime = SDL_GetTicks() - frameStart;
+        
+        if (frameDelay > frameTime) {
+            SDL_Delay(frameDelay - frameTime);
+        }
+        
         if (isPlayerNearNPC(100.0f)) {
             std::string npcName = getNearestNPCName(100.0f);
         }
@@ -152,6 +197,11 @@ void Game::cleanup() {
     if (backgroundMusic) {
         Mix_FreeMusic(backgroundMusic);
         backgroundMusic = nullptr;
+    }
+    
+    if (questionIndicator) {
+        SDL_DestroyTexture(questionIndicator);
+        questionIndicator = nullptr;
     }
     
     SDL_Quit();
